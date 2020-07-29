@@ -24,13 +24,13 @@ public class FallbackNamespace implements Namespace {
 
   private static final Logger LOG = getLogger(FallbackNamespace.class);
   private static final String DESERIALIZE_ERROR =
-      "Deserialization failed with both the versioned and legacy serializers. The legacy serializer failed with:\n %s";
-  private final Namespace legacy;
-  private final Namespace compatible;
+      "Deserialization failed with both the versioned and fallback serializers. The fallback serializer failed with:\n %s";
+  private final Namespace fallback;
+  private final Namespace namespace;
 
-  public FallbackNamespace(final Namespace legacy, final Namespace compatible) {
-    this.legacy = legacy;
-    this.compatible = compatible;
+  public FallbackNamespace(final Namespace fallback, final Namespace namespace) {
+    this.fallback = fallback;
+    this.namespace = namespace;
   }
 
   /**
@@ -42,7 +42,7 @@ public class FallbackNamespace implements Namespace {
    * @return serialized bytes
    */
   public byte[] serialize(final Object obj) {
-    return compatible.serialize(obj);
+    return namespace.serialize(obj);
   }
 
   /**
@@ -53,7 +53,7 @@ public class FallbackNamespace implements Namespace {
    * @return serialized bytes
    */
   public byte[] serialize(final Object obj, final int bufferSize) {
-    return compatible.serialize(obj, bufferSize);
+    return namespace.serialize(obj, bufferSize);
   }
 
   /**
@@ -63,7 +63,7 @@ public class FallbackNamespace implements Namespace {
    * @param buffer to write to
    */
   public void serialize(final Object obj, final ByteBuffer buffer) {
-    compatible.serialize(obj, buffer);
+    namespace.serialize(obj, buffer);
   }
 
   /**
@@ -75,10 +75,10 @@ public class FallbackNamespace implements Namespace {
    */
   public <T> T deserialize(final byte[] bytes) {
     try {
-      return compatible.deserialize(bytes);
+      return namespace.deserialize(bytes);
     } catch (final Exception compatEx) {
       try {
-        return legacy.deserialize(bytes);
+        return fallback.deserialize(bytes);
       } catch (final Exception legacyEx) {
         // rethrow most relevant exception and log the second one
         LOG.warn(String.format(DESERIALIZE_ERROR, legacyEx));
@@ -99,11 +99,11 @@ public class FallbackNamespace implements Namespace {
     final int limit = buffer.limit();
 
     try {
-      return compatible.deserialize(buffer);
+      return namespace.deserialize(buffer);
     } catch (final Exception compatEx) {
       try {
         buffer.position(position).limit(limit);
-        return legacy.deserialize(buffer);
+        return fallback.deserialize(buffer);
       } catch (final Exception legacyEx) {
         // rethrow most relevant exception and log the second one
         LOG.warn(String.format(DESERIALIZE_ERROR, legacyEx));
